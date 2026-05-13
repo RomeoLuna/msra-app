@@ -10,7 +10,9 @@ const PRINT_CSS = `
     print-color-adjust: exact !important;
     color-adjust: exact !important;
   }
-  .no-print { display: none !important; }
+  .no-print  { display: none !important; }
+  .aa-screen { display: none !important; }
+  .aa-print  { display: block !important; }
   body { background: white !important; margin: 0 !important; padding: 0 !important; }
   #msra-doc {
     box-shadow: none !important;
@@ -18,11 +20,11 @@ const PRINT_CSS = `
     padding: 6px !important;
     margin: 0 !important;
   }
-  textarea { overflow: visible !important; height: auto !important; resize: none !important; }
-  select   { -webkit-appearance: none !important; appearance: none !important; }
-  input[type="date"]::-webkit-calendar-picker-indicator { display: none !important; }
-  table { page-break-inside: auto; }
+  table { table-layout: auto !important; page-break-inside: auto; }
   tr    { page-break-inside: avoid; page-break-after: auto; }
+  td, th { overflow: visible !important; }
+  select { -webkit-appearance: none !important; appearance: none !important; }
+  input[type="date"]::-webkit-calendar-picker-indicator { display: none !important; }
 }
 `;
 
@@ -84,29 +86,50 @@ const hs = (s={}) => ({ border:BD, padding:"3px 4px", fontSize:11, verticalAlign
 const sl = (s={}) => ({ width:"100%", border:"none", outline:"none", background:"transparent",
                          fontSize:10, fontFamily:"Arial,sans-serif", cursor:"pointer", ...s });
 
-/* ─── AUTO-RESIZE TEXTAREA ──────────────────────────────────────────────── */
+/* ─── AUTO-RESIZE TEXTAREA + PRINT MIRROR ───────────────────────────────── */
+// On screen: textarea that grows with content via JS.
+// On print:  a plain <div> (aa-print) that shows ALL text without height clipping.
+//            The textarea (aa-screen) is hidden in print by PRINT_CSS.
 const AA = ({ value, onChange, placeholder, style={} }) => {
   const ref = useRef(null);
+  const fs  = style.fontSize || 11;
   const resize = () => {
     if (!ref.current) return;
     ref.current.style.height = "auto";
     ref.current.style.height = ref.current.scrollHeight + "px";
   };
   return (
-    <textarea
-      ref={ref}
-      value={value}
-      placeholder={placeholder}
-      rows={1}
-      onChange={e => { onChange(e); resize(); }}
-      onFocus={resize}
-      style={{
-        width:"100%", border:"none", outline:"none", background:"transparent",
-        resize:"none", overflow:"hidden", fontFamily:"Arial,sans-serif",
-        fontSize:11, lineHeight:"1.4", padding:"1px 0", minHeight:18, display:"block",
-        ...style,
-      }}
-    />
+    <div style={{ width:"100%", position:"relative" }}>
+      {/* ── Screen version ── */}
+      <textarea
+        ref={ref}
+        value={value}
+        placeholder={placeholder}
+        rows={1}
+        className="aa-screen"
+        onChange={e => { onChange(e); resize(); }}
+        onFocus={resize}
+        style={{
+          width:"100%", border:"none", outline:"none", background:"transparent",
+          resize:"none", overflow:"hidden", fontFamily:"Arial,sans-serif",
+          fontSize:fs, lineHeight:"1.4", padding:"1px 0", minHeight:18, display:"block",
+          ...style,
+        }}
+      />
+      {/* ── Print version (hidden on screen, shown in print via CSS) ── */}
+      <div
+        className="aa-print"
+        style={{
+          display:"none",                     /* hidden on screen */
+          fontSize:fs, fontFamily:"Arial,sans-serif",
+          lineHeight:"1.4", padding:"1px 0",
+          whiteSpace:"pre-wrap", wordBreak:"break-word",
+          minHeight:18, color: value ? "#000" : "#bbb",
+        }}
+      >
+        {value || placeholder}
+      </div>
+    </div>
   );
 };
 
